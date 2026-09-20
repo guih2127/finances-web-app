@@ -1,0 +1,19 @@
+# Render blueprint — um único web service que builda o frontend e o backend,
+# e roda o backend (que serve a SPA + a API do mesmo lugar).
+# O banco é um Postgres gerenciado (Neon), referenciado via DATABASE_URL.
+services:
+  - type: web
+    name: financas
+    runtime: node
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build && cd ../backend && npm ci && npm run build
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      # Defina no dashboard do Render (aba Environment) — nunca commite.
+      - key: DATABASE_URL # string de conexão do Neon
+        sync: false
