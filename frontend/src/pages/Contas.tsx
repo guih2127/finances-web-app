@@ -85,7 +85,6 @@ function Section({
       <div className="lh"><b>{title}</b></div>
       {txs.map((t) => (
         <div className="cat" key={t.id}>
-          <div className="chip">{t.icon}</div>
           <div className="nm"><div className="t" style={t.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : undefined}>{t.categoryName}</div></div>
           <div className="rt">
             <button className="a num" onClick={() => onEdit(t)} title="editar valor"
@@ -93,8 +92,9 @@ function Section({
               {brl(t.amountCents)} ✎
             </button>
           </div>
-          <button className={t.paid ? 'pill-pago' : 'pill-pagar'} onClick={() => onToggle(t)}>
-            {t.paid ? '✓ pago' : 'marcar pago'}
+          <button className={`check ${t.paid ? 'on' : ''}`} onClick={() => onToggle(t)}
+            title={t.paid ? 'pago — desmarcar' : 'marcar como pago'} aria-label={t.paid ? 'pago' : 'marcar como pago'} aria-pressed={t.paid}>
+            ✓
           </button>
         </div>
       ))}

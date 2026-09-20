@@ -108,7 +108,6 @@ export function Lancamentos() {
         )}
         {shown.map((t) => (
           <div className="cat clickable" key={t.id} onClick={() => setEditing(t)} title="editar lançamento">
-            <div className="chip">{t.icon}</div>
             <div className="nm">
               <div className="t">{t.description || t.categoryName}</div>
               <div className="s">{t.categoryName} · {fmtDate(t.date)}</div>

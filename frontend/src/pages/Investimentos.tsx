@@ -55,7 +55,6 @@ export function Investimentos() {
         {txs.length === 0 && <div style={{ padding: '12px 0', color: 'var(--muted)', fontSize: 13 }}>Nenhum investimento configurado.</div>}
         {txs.map((t) => (
           <div className="cat" key={t.id}>
-            <div className="chip">{t.icon}</div>
             <div className="nm">
               <div className="t" style={t.paid ? { color: 'var(--muted)' } : undefined}>{t.categoryName}</div>
             </div>
@@ -65,8 +64,9 @@ export function Investimentos() {
                 {brl(t.amountCents)} ✎
               </button>
             </div>
-            <button className={t.paid ? 'pill-pago' : 'pill-pagar'} onClick={() => toggle(t)}>
-              {t.paid ? '✓ feito' : 'marcar feito'}
+            <button className={`check ${t.paid ? 'on' : ''}`} onClick={() => toggle(t)}
+              title={t.paid ? 'aportado — desmarcar' : 'marcar como aportado'} aria-label={t.paid ? 'aportado' : 'marcar como aportado'} aria-pressed={t.paid}>
+              ✓
             </button>
           </div>
         ))}

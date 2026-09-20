@@ -159,6 +159,14 @@ body {
 .pill-pago { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(198,242,78,.15); color: var(--lime); font-weight: 600; border: none; cursor: pointer; }
 .pill-pagar { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: var(--card2); color: var(--muted); font-weight: 600; border: 1px solid var(--line); cursor: pointer; }
 
+/* Check compacto (marcar pago / aportado) — substitui o antigo pill */
+.check { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; padding: 0;
+  background: var(--card2); border: 1.8px solid var(--line); color: transparent;
+  font-size: 15px; font-weight: 800; line-height: 1; cursor: pointer;
+  display: grid; place-items: center; transition: background .15s, border-color .15s, color .15s; }
+.check:hover { border-color: var(--muted); }
+.check.on { background: var(--lime); border-color: var(--lime); color: #0d100e; }
+
 .loading { color: var(--muted); padding: 40px; text-align: center; }
 
 /* Barra de filtro dos Lançamentos */
@@ -233,7 +241,16 @@ select option { background: var(--card2); color: var(--txt); }
 .seg-kind { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .seg-kind button { flex: 1; background: var(--bg); border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 9px 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
 .seg-kind button.on { background: var(--lime); color: #0d100e; border-color: var(--lime); }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.modal-actions { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* Linha de toggle dentro do modal ("Vem todo mês") */
+.switch-field { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.switch-field .sf-t { font-size: 13.5px; font-weight: 600; }
+.switch-field .sf-s { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+/* Botão de apagar (texto) dentro do modal de edição */
+.btn-del-link { background: none; border: none; color: var(--red); font-family: inherit; font-size: 13px;
+  font-weight: 600; cursor: pointer; padding: 8px 2px; }
+.btn-del-link:hover { text-decoration: underline; }
 
 /* FAB flutuante */
 .fab { position: fixed; bottom: 28px; right: 28px; width: 58px; height: 58px; border-radius: 50%; background: var(--lime); color: #0d100e; border: none; font-size: 30px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 26px rgba(198,242,78,.4); z-index: 40; }
