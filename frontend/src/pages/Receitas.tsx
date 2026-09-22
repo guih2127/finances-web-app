@@ -6,13 +6,18 @@ import { MonthNav } from '../components/MonthNav';
 
 export function Receitas() {
   const [month, setMonth] = useMonthState();
-  const { data, loading } = useSummary(month);
+  const { data, loading, reload } = useSummary(month);
   const [fx, setFx] = useState<{ rate: number; updatedAt: string } | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
 
   async function refreshFx() {
     setFxLoading(true);
-    try { setFx(await api.fx()); } finally { setFxLoading(false); }
+    try {
+      setFx(await api.fx());
+      reload(); // recarrega o summary → recalcula o salário com a cotação nova
+    } finally {
+      setFxLoading(false);
+    }
   }
 
   if (loading || !data) return <div className="loading">Carregando…</div>;
