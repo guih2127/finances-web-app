@@ -62,18 +62,31 @@ export function currentYm(): string {
   }).format(new Date()); // en-CA → "YYYY-MM"
 }
 
-// Busca a cotação USD->BRL ao vivo (AwesomeAPI, grátis e sem chave).
-// Retorna null se a API não responder — quem chama decide o fallback.
+// Fontes de cotação USD->BRL, em ordem de preferência. Todas grátis e sem chave.
+// A AwesomeAPI dá o valor em tempo real, mas bloqueia IPs de datacenter (não
+// funciona no Render); por isso caímos pra APIs/CDN que respondem de qualquer
+// lugar. A primeira que responder um número válido vence.
+const FX_SOURCES: { name: string; url: string; pick: (d: any) => number | undefined }[] = [
+  { name: 'awesomeapi', url: 'https://economia.awesomeapi.com.br/last/USD-BRL', pick: (d) => Number(d?.USDBRL?.bid) },
+  { name: 'open.er-api', url: 'https://open.er-api.com/v6/latest/USD', pick: (d) => Number(d?.rates?.BRL) },
+  { name: 'jsdelivr', url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json', pick: (d) => Number(d?.usd?.brl) },
+];
+
+// Busca a cotação USD->BRL ao vivo tentando cada fonte em ordem.
+// Retorna null só se TODAS falharem — quem chama decide o fallback.
 export async function fetchLiveUsdRate(): Promise<number | null> {
-  try {
-    const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
-    if (!r.ok) return null;
-    const d = (await r.json()) as { USDBRL?: { bid: string } };
-    const bid = Number(d.USDBRL?.bid);
-    return bid || null;
-  } catch {
-    return null;
+  for (const src of FX_SOURCES) {
+    try {
+      const r = await fetch(src.url, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) { console.warn(`[fx] ${src.name} HTTP ${r.status}`); continue; }
+      const rate = src.pick(await r.json());
+      if (rate && Number.isFinite(rate) && rate > 0) return rate;
+      console.warn(`[fx] ${src.name} resposta sem cotação válida`);
+    } catch (err) {
+      console.warn(`[fx] ${src.name} falhou: ${String(err)}`);
+    }
   }
+  return null;
 }
 
 // Garante que o mês tenha config (salário + taxa + cotação + teto). Herda
