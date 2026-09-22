@@ -90,16 +90,17 @@ export async function fetchLiveUsdRate(): Promise<number | null> {
 }
 
 // Garante que o mês tenha config (salário + taxa + cotação + teto). Herda
-// salário/taxa/teto do mês mais recente. A cotação do dólar é ATUALIZADA ao vivo
-// toda vez que o MÊS ATUAL é acessado (assim o app sempre pega a cotação de hoje);
-// meses passados ficam congelados — salário histórico não muda retroativamente.
+// salário/taxa/teto do mês mais recente. A cotação do dólar acompanha a cotação
+// ao vivo no mês ATUAL e nos FUTUROS (o salário ainda não foi recebido, então o
+// que vale é a cotação de hoje). Só meses PASSADOS ficam congelados — salário
+// histórico não muda retroativamente.
 export async function ensureMonthSettings(uid: number, ym: string): Promise<void> {
   const exists = await pool.query('SELECT 1 FROM month_settings WHERE user_id=$1 AND ym=$2', [uid, ym]);
-  const isCurrent = ym === currentYm();
+  const isPast = ym < currentYm(); // comparação lexicográfica funciona pra YYYY-MM
 
-  // Mês já existe: só o mês atual acompanha a cotação ao vivo; os demais ficam como estão.
+  // Mês já existe: atual/futuro acompanha a cotação ao vivo; passado fica congelado.
   if (exists.rows.length) {
-    if (isCurrent) {
+    if (!isPast) {
       const live = await fetchLiveUsdRate();
       if (live) {
         await pool.query('UPDATE month_settings SET usd_rate=$3 WHERE user_id=$1 AND ym=$2', [uid, ym, live]);
@@ -119,9 +120,10 @@ export async function ensureMonthSettings(uid: number, ym: string): Promise<void
   const salaryUsd = base?.salary_usd_cents ?? 400000;
   const feeUsd = base?.salary_fee_usd_cents ?? 3700;
   const cardLimit = base?.card_limit_cents ?? 0;
-  // cotação atual ao vivo; se a API não responder, mantém a do mês anterior
-  const live = await fetchLiveUsdRate();
-  const rate = live ?? Number(base?.usd_rate ?? 0);
+  // mês atual/futuro: cotação ao vivo (com fallback pra do mês anterior se a API
+  // falhar). mês passado criado retroativamente: herda a cotação congelada.
+  const prevRate = Number(base?.usd_rate ?? 0);
+  const rate = isPast ? prevRate : (await fetchLiveUsdRate()) ?? prevRate;
 
   await pool.query(
     `INSERT INTO month_settings (user_id, ym, salary_usd_cents, salary_fee_usd_cents, usd_rate, card_limit_cents)
