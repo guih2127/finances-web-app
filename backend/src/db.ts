@@ -52,12 +52,48 @@ export async function currentUserId(): Promise<number> {
   return rows[0].id;
 }
 
-// Garante que o mês tenha config (salário + taxa + cotação + teto). Se ainda
-// não existe, herda salário/taxa/teto do mês mais recente e CONGELA a cotação
-// do dólar atual — assim o salário é computado automaticamente todo mês.
+// Mês atual (YYYY-MM) no fuso do Brasil — o servidor (Render) roda em UTC, então
+// calculamos explicitamente pra não "virar o mês" com horas de diferença.
+export function currentYm(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+  }).format(new Date()); // en-CA → "YYYY-MM"
+}
+
+// Busca a cotação USD->BRL ao vivo (AwesomeAPI, grátis e sem chave).
+// Retorna null se a API não responder — quem chama decide o fallback.
+export async function fetchLiveUsdRate(): Promise<number | null> {
+  try {
+    const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
+    if (!r.ok) return null;
+    const d = (await r.json()) as { USDBRL?: { bid: string } };
+    const bid = Number(d.USDBRL?.bid);
+    return bid || null;
+  } catch {
+    return null;
+  }
+}
+
+// Garante que o mês tenha config (salário + taxa + cotação + teto). Herda
+// salário/taxa/teto do mês mais recente. A cotação do dólar é ATUALIZADA ao vivo
+// toda vez que o MÊS ATUAL é acessado (assim o app sempre pega a cotação de hoje);
+// meses passados ficam congelados — salário histórico não muda retroativamente.
 export async function ensureMonthSettings(uid: number, ym: string): Promise<void> {
   const exists = await pool.query('SELECT 1 FROM month_settings WHERE user_id=$1 AND ym=$2', [uid, ym]);
-  if (exists.rows.length) return;
+  const isCurrent = ym === currentYm();
+
+  // Mês já existe: só o mês atual acompanha a cotação ao vivo; os demais ficam como estão.
+  if (exists.rows.length) {
+    if (isCurrent) {
+      const live = await fetchLiveUsdRate();
+      if (live) {
+        await pool.query('UPDATE month_settings SET usd_rate=$3 WHERE user_id=$1 AND ym=$2', [uid, ym, live]);
+      }
+    }
+    return;
+  }
 
   const prev = await pool.query<{
     salary_usd_cents: number; salary_fee_usd_cents: number; usd_rate: string; card_limit_cents: number;
@@ -70,19 +106,9 @@ export async function ensureMonthSettings(uid: number, ym: string): Promise<void
   const salaryUsd = base?.salary_usd_cents ?? 400000;
   const feeUsd = base?.salary_fee_usd_cents ?? 3700;
   const cardLimit = base?.card_limit_cents ?? 0;
-  let rate = Number(base?.usd_rate ?? 0);
-
-  // congela a cotação atual (se a API responder); senão mantém a do mês anterior
-  try {
-    const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
-    if (r.ok) {
-      const d = (await r.json()) as { USDBRL?: { bid: string } };
-      const bid = Number(d.USDBRL?.bid);
-      if (bid) rate = bid;
-    }
-  } catch {
-    /* sem internet: mantém a cotação do mês anterior */
-  }
+  // cotação atual ao vivo; se a API não responder, mantém a do mês anterior
+  const live = await fetchLiveUsdRate();
+  const rate = live ?? Number(base?.usd_rate ?? 0);
 
   await pool.query(
     `INSERT INTO month_settings (user_id, ym, salary_usd_cents, salary_fee_usd_cents, usd_rate, card_limit_cents)

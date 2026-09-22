@@ -33,7 +33,7 @@ export function Receitas() {
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', paddingBottom: 6 }}>
           (US$ {(data.salaryUsdCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} − taxa US$ {(data.salaryFeeUsdCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) × R$ {Number(data.usdRate).toFixed(4)}
-          {fx && <> · ao vivo: <b style={{ color: 'var(--lime)' }}>R$ {fx.rate.toFixed(4)}</b> ({fx.updatedAt})</>}
+          {fx && <> · ao vivo: <b style={{ color: 'var(--lime)' }}>R$ {fx.rate.toFixed(4)}</b> ({new Date(fx.updatedAt).toLocaleString('pt-BR')})</>}
         </div>
         <div className="v lime num" style={{ fontSize: 30, fontWeight: 800, paddingBottom: 12 }}>{brl(data.salaryCents)}</div>
       </div>
